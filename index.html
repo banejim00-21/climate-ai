@@ -41,6 +41,13 @@
         .relay-status { padding: 0.4rem 0.8rem; border-radius: 15px; font-size: 0.75rem; font-weight: 600; }
         .relay-status.on { background: rgba(0,255,0,0.2); color: #0f0; border: 1px solid #0f0; }
         .relay-status.off { background: rgba(255,255,255,0.05); color: #8892b0; border: 1px solid #8892b0; }
+        .window-control { grid-column: span 12; }
+        .window-slider { width: 100%; height: 60px; background: #1a1a2e; border-radius: 30px; border: 2px solid rgba(0,255,255,0.3); overflow: hidden; margin: 1rem 0; position: relative; }
+        .window-fill { height: 100%; background: linear-gradient(90deg, #0ff, #f0f); transition: width 0.5s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 1.5rem; font-family: 'Orbitron', sans-serif; font-size: 1.5rem; font-weight: 900; }
+        .window-buttons { display: flex; gap: 0.8rem; justify-content: center; }
+        .btn { padding: 0.8rem 1.5rem; border: 2px solid rgba(0,255,255,0.3); border-radius: 10px; background: rgba(26,26,46,0.8); color: #fff; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; cursor: pointer; transition: all 0.3s; }
+        .btn:hover { border-color: #0ff; box-shadow: 0 0 20px rgba(0,255,255,0.5); transform: translateY(-2px); }
+        .btn:active { transform: translateY(0); }
         .mode-selector { grid-column: span 12; display: flex; gap: 0.8rem; flex-wrap: wrap; }
         .mode-btn { flex: 1; min-width: 120px; padding: 1.2rem; border: 2px solid rgba(0,255,255,0.3); border-radius: 12px; background: rgba(26,26,46,0.5); color: #fff; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; cursor: pointer; transition: all 0.3s; text-align: center; }
         .mode-btn:hover { border-color: #0ff; transform: translateY(-2px); }
@@ -50,6 +57,8 @@
         .stat-box { background: rgba(26,26,46,0.5); border: 2px solid rgba(0,255,255,0.3); border-radius: 12px; padding: 1.2rem; text-align: center; }
         .stat-value { font-family: 'Orbitron', monospace; font-size: 2rem; font-weight: 900; background: linear-gradient(135deg, #0ff, #ff0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0.5rem 0; }
         .stat-label { font-size: 0.75rem; text-transform: uppercase; color: #8892b0; }
+        .control-input { width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.3); border: 2px solid rgba(0,255,255,0.3); border-radius: 8px; color: #fff; font-family: 'Orbitron', monospace; font-size: 1rem; margin-top: 0.5rem; }
+        .control-input:focus { outline: none; border-color: #0ff; box-shadow: 0 0 15px rgba(0,255,255,0.3); }
         footer { text-align: center; padding: 2rem; color: #8892b0; margin-top: 2rem; font-size: 0.85rem; }
         @media (max-width: 768px) { h1 { font-size: 1.8rem; } .grid > * { grid-column: span 12 !important; } .relay-grid { grid-template-columns: repeat(2, 1fr); } .mode-selector { flex-direction: column; } }
     </style>
@@ -74,11 +83,12 @@
         </header>
 
         <div class="grid">
-            <!-- Métricas principales -->
             <div class="card" style="grid-column: span 3;">
                 <div class="card-title">🌡️ Temperatura</div>
                 <div class="metric-value"><span id="temp">--</span>°C</div>
                 <div class="metric-sub">Setpoint: <span id="setpoint">27.0</span>°C</div>
+                <input type="number" class="control-input" id="tempInput" placeholder="Nuevo setpoint" step="0.5" min="15" max="35">
+                <button class="btn" style="width:100%;margin-top:0.5rem" onclick="setThreshold()">Cambiar</button>
             </div>
 
             <div class="card" style="grid-column: span 3;">
@@ -98,7 +108,6 @@
                 <div class="metric-sub"><span id="dist">--</span> cm</div>
             </div>
 
-            <!-- PID y Fuzzy -->
             <div class="card" style="grid-column: span 6;">
                 <div class="card-title">📊 Control PID</div>
                 <div class="pid-grid">
@@ -117,7 +126,6 @@
                 </div>
             </div>
 
-            <!-- Relés -->
             <div class="card relay-grid">
                 <div class="relay-card" onclick="toggleRelay(1)">
                     <div class="relay-icon">🌀</div>
@@ -142,7 +150,20 @@
                 </div>
             </div>
 
-            <!-- Modos -->
+            <div class="card window-control">
+                <div class="card-title">🪟 Control de Ventana</div>
+                <div class="window-slider">
+                    <div class="window-fill" id="windowFill" style="width: 0%">0%</div>
+                </div>
+                <div class="window-buttons">
+                    <button class="btn" onclick="setWindow(0)">CERRAR</button>
+                    <button class="btn" onclick="setWindow(25)">25%</button>
+                    <button class="btn" onclick="setWindow(50)">50%</button>
+                    <button class="btn" onclick="setWindow(75)">75%</button>
+                    <button class="btn" onclick="setWindow(100)">ABRIR</button>
+                </div>
+            </div>
+
             <div class="mode-selector">
                 <button class="mode-btn active" onclick="setMode('FUZZY-PID')">🎯 FUZZY-PID</button>
                 <button class="mode-btn" onclick="setMode('PID')">📊 PID</button>
@@ -152,7 +173,6 @@
                 <button class="mode-btn" onclick="setMode('SMART')">💡 SMART</button>
             </div>
 
-            <!-- Gráficos -->
             <div class="card chart-container">
                 <div class="card-title">📊 Temperatura</div>
                 <canvas id="tempChart"></canvas>
@@ -162,7 +182,6 @@
                 <canvas id="pidChart"></canvas>
             </div>
 
-            <!-- Stats -->
             <div class="stats-grid">
                 <div class="stat-box"><div class="stat-label">Uptime</div><div class="stat-value" id="uptime">0h</div></div>
                 <div class="stat-box"><div class="stat-label">Activaciones</div><div class="stat-value" id="activations">0</div></div>
@@ -178,11 +197,7 @@
     </div>
 
     <script>
-        // ═══════════════════════════════════════════════════════════════════
-        // CONFIGURACIÓN - CAMBIAR SOLO ESTAS 2 LÍNEAS
-        // ═══════════════════════════════════════════════════════════════════
-        
-        let espIP = '192.168.1.100';  // ⚠️ CAMBIAR POR LA IP DE TU ESP32
+        let espIP = '192.168.1.100';  // ⚠️ CAMBIAR POR TU IP
         
         const mqttConfig = {
             broker: 'wss://perro.lmq.cloudamqp.com:443/mqtt',
@@ -191,18 +206,10 @@
             topic: 'clima/leviatanes'
         };
 
-        // ═══════════════════════════════════════════════════════════════════
-        // VARIABLES GLOBALES
-        // ═══════════════════════════════════════════════════════════════════
-        
         let mqttClient = null;
         let tempChart, pidChartObj;
         let tempData = [], pidData = [], timeLabels = [];
 
-        // ═══════════════════════════════════════════════════════════════════
-        // INICIALIZACIÓN
-        // ═══════════════════════════════════════════════════════════════════
-        
         window.onload = function() {
             console.log('🚀 Dashboard V5 ULTIMATE iniciando...');
             initCharts();
@@ -211,10 +218,6 @@
             startLocalPolling();
         };
 
-        // ═══════════════════════════════════════════════════════════════════
-        // MQTT
-        // ═══════════════════════════════════════════════════════════════════
-        
         function connectMQTT() {
             try {
                 mqttClient = mqtt.connect(mqttConfig.broker, {
@@ -252,17 +255,13 @@
         function sendMQTT(cmd) {
             if (mqttClient && mqttClient.connected) {
                 mqttClient.publish(mqttConfig.topic + '/command', JSON.stringify(cmd));
-                console.log('📤 Enviado:', cmd);
+                console.log('📤 MQTT enviado:', cmd);
             } else {
                 console.warn('⚠️ MQTT offline, usando HTTP');
                 sendHTTP(cmd);
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // HTTP LOCAL
-        // ═══════════════════════════════════════════════════════════════════
-        
         function startLocalPolling() {
             setInterval(fetchLocal, 3000);
             fetchLocal();
@@ -290,25 +289,20 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(cmd)
                 });
+                console.log('📤 HTTP enviado:', cmd);
                 fetchLocal();
             } catch (err) {
                 console.error('HTTP error:', err);
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // ACTUALIZACIÓN DE INTERFAZ
-        // ═══════════════════════════════════════════════════════════════════
-        
         function updateDashboard(d) {
-            // Métricas principales
             document.getElementById('temp').textContent = d.temperature.toFixed(1);
             document.getElementById('hum').textContent = d.humidity.toFixed(1);
             document.getElementById('dist').textContent = d.distance.toFixed(0);
             document.getElementById('presence').textContent = d.presence ? '✅' : '⭕';
             document.getElementById('setpoint').textContent = d.tempThreshold.toFixed(1);
             
-            // IA
             if (d.predictedTemp) {
                 document.getElementById('pred').textContent = d.predictedTemp.toFixed(1);
             }
@@ -317,13 +311,11 @@
                 document.getElementById('aiStatus').style.background = 'linear-gradient(135deg, #0f0, #0ff)';
             }
             
-            // PID
             document.getElementById('pidOut').textContent = (d.pidOutput || 0).toFixed(1);
             document.getElementById('pidErr').textContent = (d.pidError || 0).toFixed(2);
             document.getElementById('pidK').textContent = 
                 (d.pidKp||5).toFixed(1) + '/' + (d.pidKi||0.5).toFixed(1) + '/' + (d.pidKd||1).toFixed(1);
             
-            // Fuzzy (calculado)
             let fuzzyFan = 0;
             if (d.temperature > d.tempThreshold + 3) fuzzyFan = 100;
             else if (d.temperature > d.tempThreshold + 1) fuzzyFan = 60;
@@ -337,23 +329,25 @@
             else if (d.temperature < d.tempThreshold - 2) fuzzyState = 'Frío';
             document.getElementById('fuzzyState').textContent = fuzzyState;
             
-            // Relés
             updateRelayUI(1, d.relay1);
             updateRelayUI(2, d.relay2);
             updateRelayUI(3, d.relay3);
             updateRelayUI(4, d.relay4);
             
             document.getElementById('pwm').textContent = d.fanPWM || 0;
-            document.getElementById('windowPos').textContent = d.windowPosition || 0;
+            
+            const wPos = d.windowPosition || 0;
+            document.getElementById('windowFill').style.width = wPos + '%';
+            document.getElementById('windowFill').textContent = wPos + '%';
+            document.getElementById('windowPos').textContent = wPos;
+            
             document.getElementById('currentMode').textContent = d.mode || 'FUZZY-PID';
             
-            // Stats
             const h = Math.floor(d.uptime / 3600);
             const m = Math.floor((d.uptime % 3600) / 60);
             document.getElementById('uptime').textContent = h + 'h ' + m + 'm';
             document.getElementById('activations').textContent = d.activations || 0;
             
-            // Gráficos
             addDataToCharts(d.temperature, d.pidOutput || 0);
         }
         
@@ -374,24 +368,33 @@
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // CONTROLES
-        // ═══════════════════════════════════════════════════════════════════
-        
         function toggleRelay(n) {
             sendMQTT({ ['relay' + n]: true });
+        }
+        
+        function setWindow(pos) {
+            sendMQTT({ window: pos });
+            console.log('🪟 Ventana:', pos + '%');
         }
         
         function setMode(m) {
             document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
             sendMQTT({ mode: m });
+            console.log('⚙️ Modo:', m);
+        }
+        
+        function setThreshold() {
+            const value = parseFloat(document.getElementById('tempInput').value);
+            if (value >= 15 && value <= 35) {
+                sendMQTT({ tempThreshold: value });
+                console.log('🌡️ Nuevo setpoint:', value + '°C');
+                document.getElementById('tempInput').value = '';
+            } else {
+                alert('Temperatura debe estar entre 15°C y 35°C');
+            }
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // GRÁFICOS
-        // ═══════════════════════════════════════════════════════════════════
-        
         function initCharts() {
             const opts = {
                 responsive: true,
