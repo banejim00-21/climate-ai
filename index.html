@@ -9,119 +9,473 @@
     <script src="https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Rajdhani', sans-serif; background: #000; color: #fff; min-height: 100vh; overflow-x: hidden; }
-        body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(rgba(0,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,255,0.03) 1px, transparent 1px); background-size: 50px 50px; animation: grid 20s linear infinite; pointer-events: none; }
-        @keyframes grid { 0% { background-position: 0 0; } 100% { background-position: 50px 50px; } }
-        .container { max-width: 1800px; margin: 0 auto; padding: 2rem; position: relative; z-index: 1; }
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding: 2rem; background: linear-gradient(135deg, #1a1a2e, transparent); border: 2px solid rgba(0,255,255,0.3); border-radius: 20px; box-shadow: 0 0 30px rgba(0,255,255,0.3); }
-        .logo { display: flex; align-items: center; gap: 1.5rem; }
-        .logo-icon { width: 60px; height: 60px; background: linear-gradient(135deg, #00ffff, #ff00ff); border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 0 30px rgba(0,255,255,0.7); animation: pulse 2s ease infinite; }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-        h1 { font-family: 'Orbitron', sans-serif; font-size: 2.2rem; font-weight: 900; text-transform: uppercase; background: linear-gradient(90deg, #00ffff, #ff00ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 3px; }
-        .subtitle { font-size: 0.9rem; color: #8892b0; margin-top: 0.5rem; }
-        .badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
-        .badge { display: inline-block; padding: 0.5rem 1rem; background: linear-gradient(135deg, rgba(0,255,255,0.2), rgba(255,0,255,0.2)); border: 1px solid rgba(0,255,255,0.5); border-radius: 20px; font-size: 0.75rem; font-weight: 700; color: #00ffff; }
-        .status { display: flex; flex-direction: column; gap: 0.5rem; }
-        .status-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(0,255,255,0.3); border-radius: 25px; font-family: 'Orbitron', monospace; font-size: 0.85rem; }
-        .dot { width: 10px; height: 10px; border-radius: 50%; background: #00ff00; box-shadow: 0 0 15px #00ff00; animation: blink 1.5s ease infinite; }
+        body { font-family: 'Rajdhani', sans-serif; background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%); color: #fff; min-height: 100vh; padding: 1rem; }
+        .container { max-width: 1600px; margin: 0 auto; }
+        header { background: linear-gradient(135deg, rgba(0,255,255,0.1), rgba(255,0,255,0.1)); border: 2px solid rgba(0,255,255,0.3); border-radius: 20px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 0 30px rgba(0,255,255,0.2); }
+        .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        h1 { font-family: 'Orbitron', sans-serif; font-size: 2.5rem; font-weight: 900; background: linear-gradient(90deg, #0ff, #f0f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; letter-spacing: 3px; }
+        .badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+        .badge { padding: 0.4rem 1rem; background: linear-gradient(135deg, rgba(0,255,255,0.2), rgba(255,0,255,0.2)); border: 1px solid rgba(0,255,255,0.4); border-radius: 15px; font-size: 0.8rem; font-weight: 700; }
+        .status { display: flex; gap: 1rem; }
+        .status-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.2rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(0,255,255,0.3); border-radius: 20px; font-family: 'Orbitron', monospace; font-size: 0.85rem; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #0f0; box-shadow: 0 0 10px #0f0; animation: blink 1.5s infinite; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .dot.off { background: #ff0000; box-shadow: 0 0 15px #ff0000; animation: none; }
-        .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
-        .card { background: linear-gradient(135deg, #1a1a2e, rgba(26,26,46,0.8)); border: 2px solid rgba(0,255,255,0.3); border-radius: 20px; padding: 2rem; box-shadow: 0 0 30px rgba(0,255,255,0.2); transition: all 0.3s ease; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 0 40px rgba(0,255,255,0.4); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-        .card-title { font-family: 'Orbitron', sans-serif; font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: #00ffff; }
-        .card-icon { font-size: 2rem; }
-        .metric-value { font-family: 'Orbitron', monospace; font-size: 3rem; font-weight: 900; background: linear-gradient(135deg, #00ffff, #ff00ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .metric-sub { font-size: 0.9rem; color: #8892b0; margin-top: 0.5rem; }
-        .ai-indicator { display: inline-block; padding: 0.5rem 1rem; background: linear-gradient(135deg, #ff00ff, #00ffff); border-radius: 20px; font-size: 0.85rem; font-weight: 700; color: #000; margin-top: 0.5rem; }
-        .pid-display { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem; }
-        .pid-item { text-align: center; padding: 1rem; background: rgba(0,255,255,0.1); border-radius: 10px; }
-        .pid-label { font-size: 0.7rem; color: #8892b0; text-transform: uppercase; }
-        .pid-value { font-family: 'Orbitron', monospace; font-size: 1.5rem; color: #00ffff; margin-top: 0.25rem; }
-        .relay-grid { grid-column: span 12; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
-        .relay-card { background: #1a1a2e; border: 2px solid rgba(0,255,255,0.3); border-radius: 15px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s ease; }
-        .relay-card:hover { transform: translateY(-5px); border-color: #00ffff; }
-        .relay-card.active { border-color: #00ff00; background: linear-gradient(135deg, rgba(0,255,0,0.2), #1a1a2e); box-shadow: 0 0 30px rgba(0,255,0,0.4); }
-        .relay-icon { font-size: 3rem; margin-bottom: 1rem; }
-        .relay-name { font-family: 'Orbitron', sans-serif; font-size: 1rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.5rem; }
-        .relay-status { padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
-        .relay-status.on { background: rgba(0,255,0,0.2); color: #00ff00; border: 1px solid #00ff00; }
+        .dot.off { background: #f00; box-shadow: 0 0 10px #f00; animation: none; }
+        .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1.5rem; }
+        .card { background: linear-gradient(135deg, rgba(26,26,46,0.9), rgba(26,26,46,0.7)); border: 2px solid rgba(0,255,255,0.3); border-radius: 15px; padding: 1.5rem; transition: all 0.3s; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 0 30px rgba(0,255,255,0.3); border-color: rgba(0,255,255,0.6); }
+        .card-title { font-family: 'Orbitron', sans-serif; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: #0ff; margin-bottom: 1rem; letter-spacing: 2px; }
+        .metric-value { font-family: 'Orbitron', monospace; font-size: 2.5rem; font-weight: 900; background: linear-gradient(135deg, #0ff, #f0f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0.5rem 0; }
+        .metric-sub { font-size: 0.85rem; color: #8892b0; margin-top: 0.5rem; }
+        .ai-badge { display: inline-block; padding: 0.4rem 1rem; background: linear-gradient(135deg, #f0f, #0ff); border-radius: 15px; font-size: 0.75rem; font-weight: 700; color: #000; margin-top: 0.5rem; }
+        .pid-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; margin-top: 1rem; }
+        .pid-item { text-align: center; padding: 0.8rem; background: rgba(0,255,255,0.05); border-radius: 8px; border: 1px solid rgba(0,255,255,0.2); }
+        .pid-label { font-size: 0.65rem; color: #8892b0; text-transform: uppercase; margin-bottom: 0.3rem; }
+        .pid-value { font-family: 'Orbitron', monospace; font-size: 1.3rem; color: #0ff; }
+        .relay-grid { grid-column: span 12; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+        .relay-card { background: rgba(26,26,46,0.5); border: 2px solid rgba(0,255,255,0.3); border-radius: 12px; padding: 1.2rem; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .relay-card:hover { transform: translateY(-3px); border-color: #0ff; }
+        .relay-card.active { border-color: #0f0; background: linear-gradient(135deg, rgba(0,255,0,0.15), rgba(26,26,46,0.5)); box-shadow: 0 0 20px rgba(0,255,0,0.3); }
+        .relay-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .relay-name { font-family: 'Orbitron', sans-serif; font-size: 0.9rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .relay-status { padding: 0.4rem 0.8rem; border-radius: 15px; font-size: 0.75rem; font-weight: 600; }
+        .relay-status.on { background: rgba(0,255,0,0.2); color: #0f0; border: 1px solid #0f0; }
         .relay-status.off { background: rgba(255,255,255,0.05); color: #8892b0; border: 1px solid #8892b0; }
-        .window-control { grid-column: span 12; }
-        .window-slider { width: 100%; height: 80px; background: #1a1a2e; border-radius: 40px; border: 2px solid rgba(0,255,255,0.3); overflow: hidden; margin: 2rem 0; }
-        .window-fill { height: 100%; background: linear-gradient(90deg, #00ffff, #ff00ff); transition: width 0.5s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 2rem; font-family: 'Orbitron', sans-serif; font-size: 2rem; font-weight: 900; }
-        .window-buttons { display: flex; gap: 1rem; justify-content: center; }
-        .btn { padding: 1rem 2rem; border: 2px solid rgba(0,255,255,0.3); border-radius: 10px; background: #1a1a2e; color: #fff; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 1rem; text-transform: uppercase; cursor: pointer; transition: all 0.3s ease; }
-        .btn:hover { border-color: #00ffff; box-shadow: 0 0 20px rgba(0,255,255,0.5); transform: translateY(-2px); }
-        .mode-selector { grid-column: span 12; display: flex; gap: 1rem; flex-wrap: wrap; }
-        .mode-btn { flex: 1; min-width: 130px; padding: 1.5rem; border: 2px solid rgba(0,255,255,0.3); border-radius: 15px; background: #1a1a2e; color: #fff; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; cursor: pointer; transition: all 0.3s ease; text-align: center; }
-        .mode-btn:hover { border-color: #00ffff; transform: translateY(-3px); }
-        .mode-btn.active { background: linear-gradient(135deg, #00ffff, #ff00ff); border-color: transparent; color: #000; box-shadow: 0 0 30px rgba(0,255,255,0.6); }
-        .chart-container { grid-column: span 6; height: 400px; }
-        .stats-grid { grid-column: span 12; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; }
-        .stat-box { background: #1a1a2e; border: 2px solid rgba(0,255,255,0.3); border-radius: 15px; padding: 1.5rem; text-align: center; }
-        .stat-value { font-family: 'Orbitron', monospace; font-size: 2.5rem; font-weight: 900; background: linear-gradient(135deg, #00ffff, #ffff00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0.5rem 0; }
-        .stat-label { font-size: 0.85rem; text-transform: uppercase; color: #8892b0; }
-        footer { text-align: center; padding: 2rem; color: #8892b0; margin-top: 2rem; }
-        @media (max-width: 768px) { h1 { font-size: 1.5rem; } .grid > * { grid-column: span 12 !important; } .relay-grid { grid-template-columns: repeat(2, 1fr); } }
+        .mode-selector { grid-column: span 12; display: flex; gap: 0.8rem; flex-wrap: wrap; }
+        .mode-btn { flex: 1; min-width: 120px; padding: 1.2rem; border: 2px solid rgba(0,255,255,0.3); border-radius: 12px; background: rgba(26,26,46,0.5); color: #fff; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; cursor: pointer; transition: all 0.3s; text-align: center; }
+        .mode-btn:hover { border-color: #0ff; transform: translateY(-2px); }
+        .mode-btn.active { background: linear-gradient(135deg, #0ff, #f0f); border-color: transparent; color: #000; box-shadow: 0 0 25px rgba(0,255,255,0.5); }
+        .chart-container { grid-column: span 6; height: 350px; }
+        .stats-grid { grid-column: span 12; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+        .stat-box { background: rgba(26,26,46,0.5); border: 2px solid rgba(0,255,255,0.3); border-radius: 12px; padding: 1.2rem; text-align: center; }
+        .stat-value { font-family: 'Orbitron', monospace; font-size: 2rem; font-weight: 900; background: linear-gradient(135deg, #0ff, #ff0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0.5rem 0; }
+        .stat-label { font-size: 0.75rem; text-transform: uppercase; color: #8892b0; }
+        footer { text-align: center; padding: 2rem; color: #8892b0; margin-top: 2rem; font-size: 0.85rem; }
+        @media (max-width: 768px) { h1 { font-size: 1.8rem; } .grid > * { grid-column: span 12 !important; } .relay-grid { grid-template-columns: repeat(2, 1fr); } .mode-selector { flex-direction: column; } }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <div class="logo">
-                <div class="logo-icon">🧠</div>
+            <div class="header-content">
                 <div>
-                    <h1>Climate V5 ULTIMATE</h1>
-                    <div class="subtitle">Red Neuronal + PID + Lógica Difusa</div>
+                    <h1>🧠 Climate V5 ULTIMATE</h1>
                     <div class="badges">
-                        <span class="badge">🧠 IA</span>
-                        <span class="badge">📊 PID</span>
-                        <span class="badge">🎯 FUZZY</span>
+                        <span class="badge">🧠 Red Neuronal</span>
+                        <span class="badge">📊 Control PID</span>
+                        <span class="badge">🎯 Lógica Difusa</span>
                     </div>
                 </div>
-            </div>
-            <div class="status">
-                <div class="status-item"><div class="dot" id="wifiDot"></div><span id="wifiStatus">WiFi...</span></div>
-                <div class="status-item"><div class="dot off" id="mqttDot"></div><span id="mqttStatus">MQTT...</span></div>
+                <div class="status">
+                    <div class="status-item"><div class="dot" id="wifiDot"></div><span id="wifiStatus">WiFi</span></div>
+                    <div class="status-item"><div class="dot off" id="mqttDot"></div><span id="mqttStatus">MQTT</span></div>
+                </div>
             </div>
         </header>
+
         <div class="grid">
-            <div class="card" style="grid-column:span 3"><div class="card-header"><span class="card-title">Temperatura</span><div class="card-icon">🌡️</div></div><div class="metric-value"><span id="temp">--</span>°C</div><div class="metric-sub">SP: <span id="setpoint">27</span>°C</div></div>
-            <div class="card" style="grid-column:span 3"><div class="card-header"><span class="card-title">IA</span><div class="card-icon">🧠</div></div><div class="metric-value"><span id="pred">--</span>°C</div><div class="ai-indicator" id="aiStatus">Aprendiendo</div></div>
-            <div class="card" style="grid-column:span 3"><div class="card-header"><span class="card-title">Humedad</span><div class="card-icon">💧</div></div><div class="metric-value"><span id="hum">--</span>%</div></div>
-            <div class="card" style="grid-column:span 3"><div class="card-header"><span class="card-title">Presencia</span><div class="card-icon">👤</div></div><div class="metric-value"><span id="presence">⭕</span></div></div>
-            <div class="card" style="grid-column:span 6"><div class="card-header"><span class="card-title">📊 PID</span></div><div class="pid-display"><div class="pid-item"><div class="pid-label">Output</div><div class="pid-value" id="pidOut">0</div></div><div class="pid-item"><div class="pid-label">Error</div><div class="pid-value" id="pidErr">0</div></div><div class="pid-item"><div class="pid-label">K</div><div class="pid-value" id="pidK" style="font-size:1rem">5/0.5/1</div></div></div></div>
-            <div class="card" style="grid-column:span 6"><div class="card-header"><span class="card-title">🎯 FUZZY</span></div><div style="font-size:1.1rem;margin-top:1rem"><div>Fan: <span id="fuzzyFan" style="color:#0ff">--</span>%</div><div style="margin-top:0.5rem">Ventana: <span id="fuzzyWin" style="color:#f0f">--</span>%</div></div></div>
-            <div class="card relay-grid">
-                <div class="relay-card" onclick="toggleRelay(1)"><div class="relay-icon">🌀</div><div class="relay-name">Ventilador</div><div class="relay-status off" id="r1">OFF</div></div>
-                <div class="relay-card" onclick="toggleRelay(2)"><div class="relay-icon">💡</div><div class="relay-name">Luz</div><div class="relay-status off" id="r2">OFF</div></div>
-                <div class="relay-card" onclick="toggleRelay(3)"><div class="relay-icon">💨</div><div class="relay-name">Extractor</div><div class="relay-status off" id="r3">OFF</div></div>
-                <div class="relay-card" onclick="toggleRelay(4)"><div class="relay-icon">⚙️</div><div class="relay-name">Reserva</div><div class="relay-status off" id="r4">OFF</div></div>
+            <!-- Métricas principales -->
+            <div class="card" style="grid-column: span 3;">
+                <div class="card-title">🌡️ Temperatura</div>
+                <div class="metric-value"><span id="temp">--</span>°C</div>
+                <div class="metric-sub">Setpoint: <span id="setpoint">27.0</span>°C</div>
             </div>
-            <div class="card window-control"><div class="card-header"><span class="card-title">🪟 Ventana</span></div><div class="window-slider"><div class="window-fill" id="windowFill" style="width:0%">0%</div></div><div class="window-buttons"><button class="btn" onclick="setWindow(0)">CERRAR</button><button class="btn" onclick="setWindow(50)">50%</button><button class="btn" onclick="setWindow(100)">ABRIR</button></div></div>
+
+            <div class="card" style="grid-column: span 3;">
+                <div class="card-title">🧠 Predicción IA</div>
+                <div class="metric-value"><span id="pred">--</span>°C</div>
+                <div class="ai-badge" id="aiStatus">Aprendiendo...</div>
+            </div>
+
+            <div class="card" style="grid-column: span 3;">
+                <div class="card-title">💧 Humedad</div>
+                <div class="metric-value"><span id="hum">--</span>%</div>
+            </div>
+
+            <div class="card" style="grid-column: span 3;">
+                <div class="card-title">👤 Presencia</div>
+                <div class="metric-value"><span id="presence">⭕</span></div>
+                <div class="metric-sub"><span id="dist">--</span> cm</div>
+            </div>
+
+            <!-- PID y Fuzzy -->
+            <div class="card" style="grid-column: span 6;">
+                <div class="card-title">📊 Control PID</div>
+                <div class="pid-grid">
+                    <div class="pid-item"><div class="pid-label">Output</div><div class="pid-value" id="pidOut">0</div></div>
+                    <div class="pid-item"><div class="pid-label">Error</div><div class="pid-value" id="pidErr">0.0</div></div>
+                    <div class="pid-item"><div class="pid-label">Kp/Ki/Kd</div><div class="pid-value" id="pidK" style="font-size:0.9rem">5.0/0.5/1.0</div></div>
+                </div>
+            </div>
+
+            <div class="card" style="grid-column: span 6;">
+                <div class="card-title">🎯 Lógica Difusa</div>
+                <div style="margin-top:1rem;font-size:1.05rem;">
+                    <div style="margin-bottom:0.8rem;">Fan: <span id="fuzzyFan" style="color:#0ff;font-weight:700">--</span>%</div>
+                    <div style="margin-bottom:0.8rem;">Ventana: <span id="fuzzyWin" style="color:#f0f;font-weight:700">--</span>%</div>
+                    <div>Estado: <span id="fuzzyState" style="color:#0f0;font-weight:700">Normal</span></div>
+                </div>
+            </div>
+
+            <!-- Relés -->
+            <div class="card relay-grid">
+                <div class="relay-card" onclick="toggleRelay(1)">
+                    <div class="relay-icon">🌀</div>
+                    <div class="relay-name">Ventilador</div>
+                    <div class="relay-status off" id="r1">OFF</div>
+                    <div style="margin-top:0.5rem;font-size:0.75rem;color:#8892b0">PWM: <span id="pwm">0</span></div>
+                </div>
+                <div class="relay-card" onclick="toggleRelay(2)">
+                    <div class="relay-icon">💡</div>
+                    <div class="relay-name">Luz</div>
+                    <div class="relay-status off" id="r2">OFF</div>
+                </div>
+                <div class="relay-card" onclick="toggleRelay(3)">
+                    <div class="relay-icon">💨</div>
+                    <div class="relay-name">Extractor</div>
+                    <div class="relay-status off" id="r3">OFF</div>
+                </div>
+                <div class="relay-card" onclick="toggleRelay(4)">
+                    <div class="relay-icon">⚙️</div>
+                    <div class="relay-name">Reserva</div>
+                    <div class="relay-status off" id="r4">OFF</div>
+                </div>
+            </div>
+
+            <!-- Modos -->
             <div class="mode-selector">
                 <button class="mode-btn active" onclick="setMode('FUZZY-PID')">🎯 FUZZY-PID</button>
                 <button class="mode-btn" onclick="setMode('PID')">📊 PID</button>
                 <button class="mode-btn" onclick="setMode('FUZZY')">🎯 FUZZY</button>
                 <button class="mode-btn" onclick="setMode('AI')">🧠 AI</button>
                 <button class="mode-btn" onclick="setMode('AUTO')">🤖 AUTO</button>
-                <button class="mode-btn" onclick="setMode('MANUAL')">✋ MANUAL</button>
+                <button class="mode-btn" onclick="setMode('SMART')">💡 SMART</button>
             </div>
-            <div class="card chart-container"><div class="card-header"><span class="card-title">📊 Temperatura</span></div><canvas id="tempChart"></canvas></div>
-            <div class="card chart-container"><div class="card-header"><span class="card-title">📈 PID</span></div><canvas id="pidChart"></canvas></div>
+
+            <!-- Gráficos -->
+            <div class="card chart-container">
+                <div class="card-title">📊 Temperatura</div>
+                <canvas id="tempChart"></canvas>
+            </div>
+            <div class="card chart-container">
+                <div class="card-title">📈 PID Output</div>
+                <canvas id="pidChart"></canvas>
+            </div>
+
+            <!-- Stats -->
             <div class="stats-grid">
                 <div class="stat-box"><div class="stat-label">Uptime</div><div class="stat-value" id="uptime">0h</div></div>
                 <div class="stat-box"><div class="stat-label">Activaciones</div><div class="stat-value" id="activations">0</div></div>
                 <div class="stat-box"><div class="stat-label">Ventana</div><div class="stat-value"><span id="windowPos">0</span>%</div></div>
-                <div class="stat-box"><div class="stat-label">Modo</div><div class="stat-value" id="currentMode" style="font-size:1.2rem">FUZZY-PID</div></div>
+                <div class="stat-box"><div class="stat-label">Modo</div><div class="stat-value" id="currentMode" style="font-size:1.3rem">FUZZY-PID</div></div>
             </div>
         </div>
-        <footer><p>Sistema V5 ULTIMATE | Red Neuronal + PID + Lógica Difusa</p></footer>
+
+        <footer>
+            <p><strong>Sistema V5.0 ULTIMATE</strong> | Red Neuronal + Control PID + Lógica Difusa</p>
+            <p style="margin-top:0.5rem;opacity:0.7">ESP32 | DHT11 | HC-SR04 | CloudAMQP | 4 Relés | Motor Paso a Paso</p>
+        </footer>
     </div>
+
     <script>
-        let espIP='192.168.1.100';const mqttConfig={broker:'wss://perro.lmq.cloudamqp.com:443/mqtt',username:'fqzxnqhg:fqzxnqhg',password:'fz6xwqLm6bjr4YjQt_wR-oujymOZfcgA',topic:'clima/leviatanes'};let mqttClient=null,tempChart,pidChartObj,tempData=[],pidData=[],timeLabels=[];window.onload=function(){initCharts();generateInitialData();connectMQTT();startLocalPolling()};function connectMQTT(){try{mqttClient=mqtt.connect(mqttConfig.broker,{username:mqttConfig.username,password:mqttConfig.password,clientId:'D_'+Math.random().toString(16).substr(2,8)});mqttClient.on('connect',()=>{document.getElementById('mqttDot').classList.remove('off');document.getElementById('mqttStatus').textContent='MQTT: OK';mqttClient.subscribe(mqttConfig.topic+'/data')});mqttClient.on('message',(topic,message)=>{try{updateDashboard(JSON.parse(message.toString()))}catch(e){}});mqttClient.on('error',()=>{document.getElementById('mqttDot').classList.add('off');document.getElementById('mqttStatus').textContent='MQTT: Error'})}catch(error){}}function sendMQTT(cmd){if(mqttClient&&mqttClient.connected){mqttClient.publish(mqttConfig.topic+'/command',JSON.stringify(cmd))}else{sendHTTP(cmd)}}function startLocalPolling(){setInterval(fetchLocal,3000);fetchLocal()}async function fetchLocal(){try{const res=await fetch(`http://${espIP}/data`);if(res.ok){updateDashboard(await res.json());document.getElementById('wifiDot').classList.remove('off');document.getElementById('wifiStatus').textContent='WiFi: OK'}}catch(err){document.getElementById('wifiDot').classList.add('off');document.getElementById('wifiStatus').textContent='WiFi: Error'}}async function sendHTTP(cmd){try{await fetch(`http://${espIP}/control`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cmd)});fetchLocal()}catch(err){}}function updateDashboard(d){document.getElementById('temp').textContent=d.temperature.toFixed(1);document.getElementById('hum').textContent=d.humidity.toFixed(1);document.getElementById('presence').textContent=d.presence?'✅':'⭕';document.getElementById('setpoint').textContent=d.tempThreshold.toFixed(1);if(d.predictedTemp)document.getElementById('pred').textContent=d.predictedTemp.toFixed(1);if(d.aiActive){document.getElementById('aiStatus').textContent='IA ACTIVA';document.getElementById('aiStatus').style.background='linear-gradient(135deg, #0f0, #0ff)'}document.getElementById('pidOut').textContent=(d.pidOutput||0).toFixed(1);document.getElementById('pidErr').textContent=(d.pidError||0).toFixed(2);document.getElementById('pidK').textContent=(d.pidKp||5).toFixed(1)+'/'+(d.pidKi||0.5).toFixed(1)+'/'+(d.pidKd||1).toFixed(1);let fuzzyFan=0;if(d.temperature>d.tempThreshold+3)fuzzyFan=100;else if(d.temperature>d.tempThreshold+1)fuzzyFan=60;else if(d.temperature>d.tempThreshold)fuzzyFan=30;document.getElementById('fuzzyFan').textContent=fuzzyFan.toFixed(0);document.getElementById('fuzzyWin').textContent=d.windowPosition||0;updateRelayUI(1,d.relay1);updateRelayUI(2,d.relay2);updateRelayUI(3,d.relay3);updateRelayUI(4,d.relay4);const wPos=d.windowPosition||0;document.getElementById('windowFill').style.width=wPos+'%';document.getElementById('windowFill').textContent=wPos+'%';document.getElementById('windowPos').textContent=wPos;document.getElementById('currentMode').textContent=d.mode||'FUZZY-PID';const h=Math.floor(d.uptime/3600);const m=Math.floor((d.uptime%3600)/60);document.getElementById('uptime').textContent=h+'h '+m+'m';document.getElementById('activations').textContent=d.activations||0;addDataToCharts(d.temperature,d.pidOutput||0)}function updateRelayUI(num,state){const card=document.querySelectorAll('.relay-card')[num-1];const status=document.getElementById('r'+num);if(state){card.classList.add('active');status.textContent='ON';status.classList.remove('off');status.classList.add('on')}else{card.classList.remove('active');status.textContent='OFF';status.classList.remove('on');status.classList.add('off')}}function toggleRelay(n){sendMQTT({['relay'+n]:true})}function setWindow(pos){sendMQTT({window:pos})}function setMode(m){document.querySelectorAll('.mode-btn').forEach(btn=>btn.classList.remove('active'));event.target.classList.add('active');sendMQTT({mode:m})}function initCharts(){const opts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,255,255,0.1)'},ticks:{color:'#8892b0'}},x:{grid:{color:'rgba(0,255,255,0.1)'},ticks:{color:'#8892b0'}}}};tempChart=new Chart(document.getElementById('tempChart'),{type:'line',data:{labels:timeLabels,datasets:[{data:tempData,borderColor:'#00ffff',backgroundColor:'rgba(0,255,255,0.1)',borderWidth:3,tension:0.4,fill:true}]},options:opts});pidChartObj=new Chart(document.getElementById('pidChart'),{type:'line',data:{labels:timeLabels,datasets:[{data:pidData,borderColor:'#ff00ff',backgroundColor:'rgba(255,0,255,0.1)',borderWidth:3,tension:0.4,fill:true}]},options:opts})}function generateInitialData(){const now=new Date();for(let i=23;i>=0;i--){const t=new Date(now-i*3600000);timeLabels.push(t.getHours()+':00');tempData.push(25+Math.sin(i/4)*5);pidData.push(50+Math.cos(i/3)*30)}updateCharts()}function addDataToCharts(t,p){if(tempData.length>=24){tempData.shift();pidData.shift();timeLabels.shift()}const now=new Date();timeLabels.push(now.getHours()+':'+String(now.getMinutes()).padStart(2,'0'));tempData.push(t);pidData.push(p);updateCharts()}function updateCharts(){tempChart.data.labels=timeLabels;tempChart.data.datasets[0].data=tempData;tempChart.update('none');pidChartObj.data.labels=timeLabels;pidChartObj.data.datasets[0].data=pidData;pidChartObj.update('none')}
+        // ═══════════════════════════════════════════════════════════════════
+        // CONFIGURACIÓN - CAMBIAR SOLO ESTAS 2 LÍNEAS
+        // ═══════════════════════════════════════════════════════════════════
+        
+        let espIP = '192.168.1.100';  // ⚠️ CAMBIAR POR LA IP DE TU ESP32
+        
+        const mqttConfig = {
+            broker: 'wss://perro.lmq.cloudamqp.com:443/mqtt',
+            username: 'fqzxnqhg:fqzxnqhg',
+            password: 'fz6xwqLm6bjr4YjQt_wR-oujymOZfcgA',
+            topic: 'clima/leviatanes'
+        };
+
+        // ═══════════════════════════════════════════════════════════════════
+        // VARIABLES GLOBALES
+        // ═══════════════════════════════════════════════════════════════════
+        
+        let mqttClient = null;
+        let tempChart, pidChartObj;
+        let tempData = [], pidData = [], timeLabels = [];
+
+        // ═══════════════════════════════════════════════════════════════════
+        // INICIALIZACIÓN
+        // ═══════════════════════════════════════════════════════════════════
+        
+        window.onload = function() {
+            console.log('🚀 Dashboard V5 ULTIMATE iniciando...');
+            initCharts();
+            generateInitialData();
+            connectMQTT();
+            startLocalPolling();
+        };
+
+        // ═══════════════════════════════════════════════════════════════════
+        // MQTT
+        // ═══════════════════════════════════════════════════════════════════
+        
+        function connectMQTT() {
+            try {
+                mqttClient = mqtt.connect(mqttConfig.broker, {
+                    username: mqttConfig.username,
+                    password: mqttConfig.password,
+                    clientId: 'Dashboard_' + Math.random().toString(16).substr(2, 8)
+                });
+                
+                mqttClient.on('connect', () => {
+                    console.log('✅ CloudAMQP conectado');
+                    document.getElementById('mqttDot').classList.remove('off');
+                    document.getElementById('mqttStatus').textContent = 'MQTT: OK';
+                    mqttClient.subscribe(mqttConfig.topic + '/data');
+                });
+                
+                mqttClient.on('message', (topic, message) => {
+                    try {
+                        const data = JSON.parse(message.toString());
+                        updateDashboard(data);
+                    } catch (e) {
+                        console.error('Error parsing MQTT:', e);
+                    }
+                });
+                
+                mqttClient.on('error', (err) => {
+                    console.error('MQTT error:', err);
+                    document.getElementById('mqttDot').classList.add('off');
+                    document.getElementById('mqttStatus').textContent = 'MQTT: Error';
+                });
+            } catch (error) {
+                console.error('MQTT init error:', error);
+            }
+        }
+        
+        function sendMQTT(cmd) {
+            if (mqttClient && mqttClient.connected) {
+                mqttClient.publish(mqttConfig.topic + '/command', JSON.stringify(cmd));
+                console.log('📤 Enviado:', cmd);
+            } else {
+                console.warn('⚠️ MQTT offline, usando HTTP');
+                sendHTTP(cmd);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // HTTP LOCAL
+        // ═══════════════════════════════════════════════════════════════════
+        
+        function startLocalPolling() {
+            setInterval(fetchLocal, 3000);
+            fetchLocal();
+        }
+        
+        async function fetchLocal() {
+            try {
+                const res = await fetch(`http://${espIP}/data`);
+                if (res.ok) {
+                    const data = await res.json();
+                    updateDashboard(data);
+                    document.getElementById('wifiDot').classList.remove('off');
+                    document.getElementById('wifiStatus').textContent = 'WiFi: OK';
+                }
+            } catch (err) {
+                document.getElementById('wifiDot').classList.add('off');
+                document.getElementById('wifiStatus').textContent = 'WiFi: Error';
+            }
+        }
+        
+        async function sendHTTP(cmd) {
+            try {
+                await fetch(`http://${espIP}/control`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cmd)
+                });
+                fetchLocal();
+            } catch (err) {
+                console.error('HTTP error:', err);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // ACTUALIZACIÓN DE INTERFAZ
+        // ═══════════════════════════════════════════════════════════════════
+        
+        function updateDashboard(d) {
+            // Métricas principales
+            document.getElementById('temp').textContent = d.temperature.toFixed(1);
+            document.getElementById('hum').textContent = d.humidity.toFixed(1);
+            document.getElementById('dist').textContent = d.distance.toFixed(0);
+            document.getElementById('presence').textContent = d.presence ? '✅' : '⭕';
+            document.getElementById('setpoint').textContent = d.tempThreshold.toFixed(1);
+            
+            // IA
+            if (d.predictedTemp) {
+                document.getElementById('pred').textContent = d.predictedTemp.toFixed(1);
+            }
+            if (d.aiActive) {
+                document.getElementById('aiStatus').textContent = '🧠 IA ACTIVA';
+                document.getElementById('aiStatus').style.background = 'linear-gradient(135deg, #0f0, #0ff)';
+            }
+            
+            // PID
+            document.getElementById('pidOut').textContent = (d.pidOutput || 0).toFixed(1);
+            document.getElementById('pidErr').textContent = (d.pidError || 0).toFixed(2);
+            document.getElementById('pidK').textContent = 
+                (d.pidKp||5).toFixed(1) + '/' + (d.pidKi||0.5).toFixed(1) + '/' + (d.pidKd||1).toFixed(1);
+            
+            // Fuzzy (calculado)
+            let fuzzyFan = 0;
+            if (d.temperature > d.tempThreshold + 3) fuzzyFan = 100;
+            else if (d.temperature > d.tempThreshold + 1) fuzzyFan = 60;
+            else if (d.temperature > d.tempThreshold) fuzzyFan = 30;
+            
+            document.getElementById('fuzzyFan').textContent = fuzzyFan;
+            document.getElementById('fuzzyWin').textContent = d.windowPosition || 0;
+            
+            let fuzzyState = 'Normal';
+            if (d.temperature > d.tempThreshold + 2) fuzzyState = 'Caliente';
+            else if (d.temperature < d.tempThreshold - 2) fuzzyState = 'Frío';
+            document.getElementById('fuzzyState').textContent = fuzzyState;
+            
+            // Relés
+            updateRelayUI(1, d.relay1);
+            updateRelayUI(2, d.relay2);
+            updateRelayUI(3, d.relay3);
+            updateRelayUI(4, d.relay4);
+            
+            document.getElementById('pwm').textContent = d.fanPWM || 0;
+            document.getElementById('windowPos').textContent = d.windowPosition || 0;
+            document.getElementById('currentMode').textContent = d.mode || 'FUZZY-PID';
+            
+            // Stats
+            const h = Math.floor(d.uptime / 3600);
+            const m = Math.floor((d.uptime % 3600) / 60);
+            document.getElementById('uptime').textContent = h + 'h ' + m + 'm';
+            document.getElementById('activations').textContent = d.activations || 0;
+            
+            // Gráficos
+            addDataToCharts(d.temperature, d.pidOutput || 0);
+        }
+        
+        function updateRelayUI(num, state) {
+            const card = document.querySelectorAll('.relay-card')[num - 1];
+            const status = document.getElementById('r' + num);
+            
+            if (state) {
+                card.classList.add('active');
+                status.textContent = 'ON';
+                status.classList.remove('off');
+                status.classList.add('on');
+            } else {
+                card.classList.remove('active');
+                status.textContent = 'OFF';
+                status.classList.remove('on');
+                status.classList.add('off');
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // CONTROLES
+        // ═══════════════════════════════════════════════════════════════════
+        
+        function toggleRelay(n) {
+            sendMQTT({ ['relay' + n]: true });
+        }
+        
+        function setMode(m) {
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            sendMQTT({ mode: m });
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // GRÁFICOS
+        // ═══════════════════════════════════════════════════════════════════
+        
+        function initCharts() {
+            const opts = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        grid: { color: 'rgba(0,255,255,0.1)' },
+                        ticks: { color: '#8892b0' }
+                    },
+                    x: {
+                        grid: { color: 'rgba(0,255,255,0.1)' },
+                        ticks: { color: '#8892b0' }
+                    }
+                }
+            };
+            
+            tempChart = new Chart(document.getElementById('tempChart'), {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [{
+                        data: tempData,
+                        borderColor: '#00ffff',
+                        backgroundColor: 'rgba(0,255,255,0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: opts
+            });
+            
+            pidChartObj = new Chart(document.getElementById('pidChart'), {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [{
+                        data: pidData,
+                        borderColor: '#ff00ff',
+                        backgroundColor: 'rgba(255,0,255,0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: opts
+            });
+        }
+        
+        function generateInitialData() {
+            const now = new Date();
+            for (let i = 23; i >= 0; i--) {
+                const t = new Date(now - i * 3600000);
+                timeLabels.push(t.getHours() + ':00');
+                tempData.push(25 + Math.sin(i/4) * 5);
+                pidData.push(50 + Math.cos(i/3) * 30);
+            }
+            updateCharts();
+        }
+        
+        function addDataToCharts(t, p) {
+            if (tempData.length >= 24) {
+                tempData.shift();
+                pidData.shift();
+                timeLabels.shift();
+            }
+            
+            const now = new Date();
+            timeLabels.push(now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0'));
+            tempData.push(t);
+            pidData.push(p);
+            updateCharts();
+        }
+        
+        function updateCharts() {
+            tempChart.data.labels = timeLabels;
+            tempChart.data.datasets[0].data = tempData;
+            tempChart.update('none');
+            
+            pidChartObj.data.labels = timeLabels;
+            pidChartObj.data.datasets[0].data = pidData;
+            pidChartObj.update('none');
+        }
     </script>
 </body>
 </html>
